@@ -1,0 +1,185 @@
+#!/bin/sh
+#
+# vim: set ts=4:
+#
+#---help---
+# Usage: alpine-chroot-install [options]
+#
+# Options and environment variables:
+#   -a ARCH                CPU architecture for the chroot. If not set, then it's
+#                          the same as the host's architecture. Options: x86_64, x86, aarch64, armhf, armv7
+#
+#   -b ALPINE_BRANCH       Alpine branch to install (default is latest-stable).
+#
+#   -d DIR          Absolute path to the directory where Alpine chroot
+#                          should be installed (default is /alpine).
+#
+#   -m ALPINE_MIRROR...    URI of the Aports mirror to fetch packages from
+#                          (default is http://dl-cdn.alpinelinux.org/alpine).
+#
+#   -n NAME_ARCHIVE	  Specify the name of the destination archive
+#
+#   -p ALPINE_PACKAGES...  Alpine packages to install into the chroot (default is
+#                          build-base ca-certificates ssl_client).
+#
+#   -r EXTRA_REPOS...      Alpine repositories to be added to
+#                          /etc/apk/repositories (main and community from
+#                          $ALPINE_MIRROR are always added).
+#
+#   -h                     Show this help message and exit.
+#
+#   -v                     Specify the version of apk-tools-static
+#---help---
+set -eu
+
+#=======================  F u n c t i o n s  =======================#
+
+einfo()
+{
+	printf '\n\033[1;36m> %s\033[0m\n' "$@" >&2  # bold cyan
+}
+
+gen_chroot_script()
+{
+	cat <<-EOF
+	#!/bin/sh
+	set -e
+	chroot . bin/sh -l
+	EOF
+}
+
+usage()
+{
+	sed -En '/^#---help---/,/^#---help---/p' "$0" | sed -E 's/^# ?//; 1d;$d;'
+}
+
+#=======================  Main  =======================#
+
+while getopts 'a:b:d:m:p:r:v:n:h' OPTION; do
+	case "$OPTION" in
+		a) ARCH="$OPTARG";;
+		b) ALPINE_BRANCH="$OPTARG";;
+		d) DIR="$OPTARG";;
+		m) ALPINE_MIRROR="$OPTARG";;
+		p) ALPINE_PACKAGES="${ALPINE_PACKAGES:-} $OPTARG";;
+		r) EXTRA_REPOS="${EXTRA_REPOS:-} $OPTARG";;
+		v) VERSION_APK="$OPTARG";;
+		n) NAME_ARCHIVE="$OPTARG";;
+		h) usage; exit 0;;
+	esac
+done
+
+: ${ARCH:="aarch64"}
+: ${ALPINE_BRANCH:="latest-stable"}
+: ${DIR:="alpine"}
+: ${ALPINE_MIRROR:="http://dl-cdn.alpinelinux.org/alpine"}
+: ${ALPINE_PACKAGES:="build-base ca-certificates ssl_client chrony openssh openssh-server wpa_supplicant sudo bash bash-doc bash-completion git nano"}
+: ${EXTRA_REPOS:=}
+: ${VERSION_APK:="2.12.7-r3"}
+: ${NAME_ARCHIVE:="alpine-minimal-aarch64"}
+
+#------------------------- Debian/Ubuntu ---------------------------#
+
+sudo apt-get install wget tar -y
+
+#=======================  Build  =======================#
+
+einfo "Installing Alpine Linux $ALPINE_BRANCH ($ARCH) into chroot"
+
+
+mkdir $DIR
+wget $ALPINE_MIRROR/$ALPINE_BRANCH/main/$ARCH/apk-tools-static-$VERSION_APK.apk
+tar -xzf apk-tools-static-*.apk -C $DIR
+rm apk-tools-static-*.apk
+cd $DIR
+./sbin/apk.static -X $ALPINE_MIRROR/$ALPINE_BRANCH/main --arch $ARCH -U --allow-untrusted --root . --initdb add alpine-base
+cd ..
+
+einfo 'Binding filesystems into chroot'
+
+sudo mount -t proc none $DIR/proc
+sudo mount -o bind /sys $DIR/sys
+sudo mount -o bind /dev $DIR/dev
+
+einfo 'Setting up Alpine'
+
+printf '%s\n' \
+	"$ALPINE_MIRROR/$ALPINE_BRANCH/main" \
+	"$ALPINE_MIRROR/$ALPINE_BRANCH/community" \
+	$EXTRA_REPOS \
+	> $DIR/etc/apk/repositories
+
+cp /etc/resolv.conf $DIR/etc/
+
+cd $DIR
+gen_chroot_script > enter-chroot
+chmod +x enter-chroot
+./enter-chroot <<-EOF
+	set -e
+	source /etc/profile
+	apk update
+	apk add $ALPINE_PACKAGES
+	if [ -d /etc/sudoers.d ] && [ ! -e /etc/sudoers.d/wheel ]; then
+		echo '%wheel ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/wheel
+	fi
+	if [ -n "${SUDO_USER:-}" ]; then
+		adduser -u "${SUDO_UID:-1000}" -G users -s /bin/sh -D "${SUDO_USER:-}" || true
+	fi
+
+	rc-update add devfs sysinit
+	rc-update add dmesg sysinit
+	rc-update add mdev sysinit
+	rc-update add modules boot
+	rc-update add sysctl boot
+	rc-update add hostname boot
+	rc-update add bootmisc boot
+	rc-update add syslog boot
+	rc-update add mount-ro shutdown
+	rc-update add killprocs shutdown
+	rc-update add savecache shutdown
+	rc-update add udhcpd boot
+	rc-update add swclock boot
+	rc-update add sshd default
+	rc-update add wpa_supplicant boot
+	rc-update add local default
+	rc-update add ntpd default
+
+	cd
+	git clone https://github.com/scopatz/nanorc.git 
+	cd nanorc
+	./install.sh
+	cd ..
+	rm -rf nanorc
+
+	cd
+	wget https://raw.githubusercontent.com/Anonym3310/Alpine-Chroot/main/files/.bashrc
+	wget https://raw.githubusercontent.com/Anonym3310/Alpine-Chroot/main/files/passwd.patch
+	mv passwd.patch /etc
+	cd /etc
+	patch -p1 < passwd.patch
+	rm passwd.patch
+	cd
+exit
+EOF
+
+einfo 'Unbinding filesystems into chroot'
+rm enter-chroot
+cd ..
+sudo umount -fn $DIR/proc
+sudo umount -fn $DIR/sys
+sudo umount -fn $DIR/dev
+
+#=======================  Compression  =======================#
+
+einfo 'Compressing a chroot into an archive'
+
+tar -cvf $NAME_ARCHIVE.tar.gz $DIR
+ls -l $NAME_ARCHIVE.tar.gz
+rm -rf $DIR
+
+cat >&2 <<-EOF
+
+        ---
+        Chroot alpine ready
+
+EOF
