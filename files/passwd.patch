@@ -1,0 +1,22 @@
+From c7ed470082bd6210c7d0a73719e5fc0459d8c650 Mon Sep 17 00:00:00 2001
+From: Anonym3310 <anonym3310228@gmail.com>
+Date: Sun, 23 Jan 2022 14:31:04 +0000
+Subject: [PATCH] 2
+
+---
+ passwd | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/passwd b/passwd
+index fc87504..dd54af8 100755
+--- a/passwd
++++ b/passwd
+@@ -1,4 +1,4 @@
+-root:x:0:0:root:/root:/bin/ash
++root:x:0:0:root:/root:/bin/bash
+ bin:x:1:1:bin:/bin:/sbin/nologin
+ daemon:x:2:2:daemon:/sbin:/sbin/nologin
+ adm:x:3:4:adm:/var/adm:/sbin/nologin
+-- 
+2.27.0
+
