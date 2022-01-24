@@ -144,6 +144,7 @@ chmod +x enter-chroot
 	rc-update add local default
 	rc-update add ntpd default
 
+	sed -i 's/ash/bash/g' /etc/passwd
 	cd
 	git clone https://github.com/scopatz/nanorc.git 
 	cd nanorc
@@ -152,13 +153,7 @@ chmod +x enter-chroot
 	rm -rf nanorc
 
 	cd
-	wget https://raw.githubusercontent.com/Anonym3310/Alpine-Chroot/main/files/.bashrc
-	wget https://raw.githubusercontent.com/Anonym3310/Alpine-Chroot/main/files/passwd.patch
-	mv passwd.patch /etc
-	cd /etc
-	patch -p1 < passwd.patch
-	rm passwd.patch
-	cd
+	wget https://raw.githubusercontent.com/Anonym3310/Alpine-Chroot/main/files/.bashrc	cd /etc	patch -p1 < passwd.patch
 exit
 EOF
 
