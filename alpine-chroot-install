@@ -53,6 +53,13 @@ usage()
 	sed -En '/^#---help---/,/^#---help---/p' "$0" | sed -E 's/^# ?//; 1d;$d;'
 }
 
+unmount()
+{
+sudo umount -fn $DIR/proc
+sudo umount -fn $DIR/sys
+sudo umount -fn $DIR/dev
+}
+
 #=======================  Main  =======================#
 
 while getopts 'a:b:d:m:p:r:v:n:h' OPTION; do
@@ -86,6 +93,11 @@ sudo apt-get install wget tar -y
 
 einfo "Installing Alpine Linux $ALPINE_BRANCH ($ARCH) into chroot"
 
+if [ -d $DIR ]
+then
+unmount
+rm -rf $DIR
+fi
 
 mkdir $DIR
 wget $ALPINE_MIRROR/$ALPINE_BRANCH/main/$ARCH/apk-tools-static-$VERSION_APK.apk
@@ -160,21 +172,21 @@ EOF
 einfo 'Unbinding filesystems into chroot'
 rm enter-chroot
 cd ..
-sudo umount -fn $DIR/proc
-sudo umount -fn $DIR/sys
-sudo umount -fn $DIR/dev
+
+unmount
 
 #=======================  Compression  =======================#
 
 einfo 'Compressing a chroot into an archive'
 
-tar -cvf $NAME_ARCHIVE.tar.gz $DIR
-ls -l $NAME_ARCHIVE.tar.gz
+ARCHIVE=$NAME_ARCHIVE.tar.gz
+tar -cvf $ARCHIVE $DIR
+ls -lh $ARCHIVE
 rm -rf $DIR
 
 cat >&2 <<-EOF
 
         ---
-        Chroot alpine ready
+        Chroot alpine ready in $ARCHIVE
 
 EOF
