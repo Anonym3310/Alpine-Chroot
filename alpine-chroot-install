@@ -165,7 +165,7 @@ chmod +x enter-chroot
 	rm -rf nanorc
 
 	cd
-	wget https://raw.githubusercontent.com/Anonym3310/Alpine-Chroot/main/files/.bashrc	cd /etc	patch -p1 < passwd.patch
+	wget https://raw.githubusercontent.com/Anonym3310/Alpine-Chroot/main/files/.bashrc
 exit
 EOF
 
