@@ -80,10 +80,10 @@ done
 : ${ALPINE_BRANCH:="latest-stable"}
 : ${DIR:="alpine"}
 : ${ALPINE_MIRROR:="http://dl-cdn.alpinelinux.org/alpine"}
-: ${ALPINE_PACKAGES:="build-base ca-certificates ssl_client chrony openssh openssh-server wpa_supplicant sudo bash bash-doc bash-completion git nano"}
+: ${ALPINE_PACKAGES:="chrony wpa_supplicant sudo bash"}
 : ${EXTRA_REPOS:=}
-: ${VERSION_APK:="2.12.7-r3"}
-: ${NAME_ARCHIVE:="alpine-minimal-aarch64"}
+: ${VERSION_APK:="2.12.9-r3"}
+: ${NAME_ARCHIVE:="alpine-minimal-$ARCH"}
 
 #------------------------- Debian/Ubuntu ---------------------------#
 
@@ -151,20 +151,13 @@ chmod +x enter-chroot
 	rc-update add savecache shutdown
 	rc-update add udhcpd boot
 	rc-update add swclock boot
-	rc-update add sshd default
 	rc-update add wpa_supplicant boot
 	rc-update add local default
 	rc-update add ntpd default
 
 	sed -i 's/ash/bash/g' /etc/passwd
 	cd
-	git clone https://github.com/scopatz/nanorc.git 
-	cd nanorc
-	./install.sh
-	cd ..
-	rm -rf nanorc
 
-	cd
 	wget https://raw.githubusercontent.com/Anonym3310/Alpine-Chroot/main/files/.bashrc
 exit
 EOF
