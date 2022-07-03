@@ -8,7 +8,7 @@ RESOLUTION=1920x1080x24
 apk add --no-cache ca-certificates curl openssl xvfb x11vnc xfce4 xfce4-terminal faenza-icon-theme dbus-x11 bash
 
 echo ""
-[ ! -f /root/.vnc/passwd ] && echo "No previous VNC password found. Setting andronix as default password!" && mkdir -p /root/.vnc && x11vnc -storepasswd alpine /root/.vnc/passwd || echo "Previously generated password found. Keeping your old password"
+[ ! -f /root/.vnc/passwd ] && echo "No previous VNC password found. Setting alpine as default password!" && mkdir -p /root/.vnc && x11vnc -storepasswd alpine /root/.vnc/passwd || echo "Previously generated password found. Keeping your old password"
 echo ""
 
 echo "#!/bin/bash
